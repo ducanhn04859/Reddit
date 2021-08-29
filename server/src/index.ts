@@ -2,15 +2,18 @@ require('dotenv').config()
 import 'reflect-metadata'
 import express from 'express'
 import { createConnection } from 'typeorm'
+import { User } from './entities/user'
+import { Post } from './entities/post'
 
 const main = async () => {
     await createConnection({
       type: "postgres",
       database: "reddit",
-      username: "postgres",
-      password: "123",
+      username: process.env.DB_USERNAME_DEV,
+      password: process.env.DB_PASSWORD_DEV,
       logging: true,
       synchronize: true,
+      entities:[User, Post]
     })
 
     
@@ -19,5 +22,4 @@ const main = async () => {
     app.listen(4000, () => console.log('Server is running in port 4000'))
     
 }
-//check git hub
 main().catch(err =>console.log(err))
