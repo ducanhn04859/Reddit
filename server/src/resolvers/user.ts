@@ -4,17 +4,26 @@ import { User } from "../entities/User"
 import { Arg, Mutation, Resolver } from "type-graphql"
 import * as argon2 from "argon2"
 import { UserMuntationResponse } from "../types/UserMutationResponse"
+import { RegisterInput } from "../types/RegisterInput"
+import { validateRegisterInput } from "../utils/validataRegisterInput"
 
 @Resolver()
 export class UserResolver {
   @Mutation((_returns) => UserMuntationResponse, { nullable: true })
   async register(
     //transform email:string (Type Script) into graphQL need add @Arg("name of variable")
-    @Arg("email") email: string,
-    @Arg("username") username: string,
-    @Arg("password") password: string
+    @Arg("registerInput") registerInput: RegisterInput
   ): Promise<UserMuntationResponse> {
+    const validateRegisterInputErrors = validateRegisterInput(registerInput)
+    if (validateRegisterInputErrors !== null)
+      return {
+        code: 400,
+        success: false,
+        ...validateRegisterInputErrors,
+      }
+
     try {
+      const { username, password, email } = registerInput
       //check exits username duplicated userName or email
       const existingUser = await User.findOne({
         where: [{ username }, { email }],
@@ -24,10 +33,12 @@ export class UserResolver {
           code: 400,
           success: false,
           message: "Duplicate Username or Email",
-          error: [
+          errors: [
             {
               field: existingUser.username === username ? "username" : "email",
-              message: "Username or Email already taken",
+              message: `${
+                existingUser.username === username ? "Username" : "Email"
+              } already taken !`,
             },
           ],
         }
