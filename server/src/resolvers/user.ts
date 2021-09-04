@@ -6,13 +6,19 @@ import * as argon2 from "argon2"
 import { UserMuntationResponse } from "../types/UserMutationResponse"
 import { RegisterInput } from "../types/RegisterInput"
 import { validateRegisterInput } from "../utils/validataRegisterInput"
+import { LoginInput } from "../types/LoginInput"
 
 @Resolver()
 export class UserResolver {
-  @Mutation((_returns) => UserMuntationResponse, { nullable: true })
+  //
+  //
+  //Mutation for register
+  //
+  @Mutation((_return) => UserMuntationResponse)
   async register(
     //transform email:string (Type Script) into graphQL need add @Arg("name of variable")
     @Arg("registerInput") registerInput: RegisterInput
+    //
   ): Promise<UserMuntationResponse> {
     const validateRegisterInputErrors = validateRegisterInput(registerInput)
     if (validateRegisterInputErrors !== null)
@@ -56,6 +62,68 @@ export class UserResolver {
         success: true,
         message: "User registration successful",
         user: await User.save(newUser), //save user into BD
+      }
+    } catch (error) {
+      return {
+        code: 500,
+        success: false,
+        message: `Internal server ${error.message}`,
+      }
+    }
+  }
+
+  //
+  //
+  //Mutation for login
+  //
+  @Mutation((_return) => UserMuntationResponse)
+  async login(
+    @Arg("loginInput") loginInput: LoginInput
+    //
+  ): Promise<UserMuntationResponse> {
+    try {
+      const { usernameOrEmail, password } = loginInput
+      const existingUser = await User.findOne(
+        usernameOrEmail.includes("@")
+          ? { email: usernameOrEmail }
+          : { username: usernameOrEmail }
+      )
+
+      if (!existingUser)
+        return {
+          code: 400,
+          success: false,
+          message: "Not found Username",
+          errors: [
+            {
+              field: "usernameOrEmail",
+              message: `Username or Password is not correct`,
+            },
+          ],
+        }
+
+      const passwordValidate = await argon2.verify(
+        existingUser.password,
+        password
+      )
+      if (!passwordValidate)
+        return {
+          code: 400,
+          success: false,
+          message: "Wrong password",
+          errors: [
+            {
+              field: "password",
+              message: `Username or Password is not correct`,
+            },
+          ],
+        }
+
+      return {
+        code: 200,
+        success: true,
+        message: "Logging successfully",
+        user: existingUser,
       }
     } catch (error) {
       return {
