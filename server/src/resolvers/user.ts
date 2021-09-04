@@ -19,9 +19,10 @@ export class UserResolver {
   @Mutation((_return) => UserMuntationResponse)
   async register(
     //transform email:string (Type Script) into graphQL need add @Arg("name of variable")
-    @Arg("registerInput") registerInput: RegisterInput
-    //
-  ): Promise<UserMuntationResponse> {
+    @Arg("registerInput") registerInput: RegisterInput,
+    @Ctx() { req }: Context
+  ): //
+  Promise<UserMuntationResponse> {
     const validateRegisterInputErrors = validateRegisterInput(registerInput)
     if (validateRegisterInputErrors !== null)
       return {
@@ -54,16 +55,22 @@ export class UserResolver {
       //hash password by argon2 package
       const hashPassword = await argon2.hash(password)
 
-      const newUser = User.create({
+      let newUser = User.create({
         username,
         password: hashPassword,
         email,
       })
+      //save user into BD
+      newUser = await User.save(newUser)
+
+      //create session and return cookie
+      req.session.userId = newUser.id
+
       return {
         code: 200,
         success: true,
         message: "User registration successful",
-        user: await User.save(newUser), //save user into BD
+        user: newUser,
       }
     } catch (error) {
       return {
