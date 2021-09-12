@@ -55,13 +55,13 @@ export class UserResolver {
       //hash password by argon2 package
       const hashPassword = await argon2.hash(password)
 
-      let newUser = User.create({
+      const newUser = User.create({
         username,
         password: hashPassword,
         email,
       })
       //save user into BD
-      newUser = await User.save(newUser)
+      await newUser.save()
 
       //create session and return cookie
       req.session.userId = newUser.id
